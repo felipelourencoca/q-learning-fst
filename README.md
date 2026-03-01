@@ -107,4 +107,52 @@ env = FSMEnvironment(
     goal_states={"C"},
 )
 ```
+
+## 🧪 Modo: Cobertura de Transições (Test Coverage)
+
+Além do modo clássico (encontrar caminho ótimo), o projeto inclui um **modo de cobertura de transições** que usa Q-Learning para **gerar sequências de teste** que cobrem todas as transições da FSM.
+
+### Critério de cobertura
+
+**Transition Coverage (Cobertura de Transições)**: cada transição `(estado, ação) → próximo_estado` definida na FSM deve ser exercitada pelo menos uma vez pela suíte de testes gerada.
+
+### Como funciona
+
+A função de recompensa é adaptada:
+- **+50** por exercitar uma transição **ainda não coberta**
+- **-1** por revisitar uma transição **já coberta**
+- **-10** por ação inválida
+
+Assim, o Q-Learning aprende a explorar transições novas, gerando sequências de teste com cobertura máxima.
+
+### Executar modo cobertura
+
+```bash
+python main_coverage.py
+```
+
+### Saída esperada
+
+1. Treina o agente com foco em cobertura
+2. Exibe **relatório de cobertura** (transições cobertas/não cobertas)
+3. Gera **suíte de testes mínima** (greedy set cover)
+4. Gera gráficos:
+   - `coverage_progress.png` — Evolução da cobertura ao longo dos episódios
+   - `fsm_coverage.png` — Diagrama do autômato com transições cobertas vs não cobertas
+
+## 📁 Estrutura do Projeto
+
+```
+Q-learning-fst/
+├── fsm_environment.py    # Ambiente FSM (estados, transições, recompensas)
+├── q_learning_agent.py   # Agente Q-Learning clássico (caminho ótimo)
+├── coverage_agent.py     # Agente Q-Learning para cobertura de transições
+├── coverage_runner.py    # Orquestrador da geração de testes
+├── visualization.py      # Gráficos e visualizações (ambos os modos)
+├── main.py               # Script principal (modo caminho ótimo)
+├── main_coverage.py      # Script principal (modo cobertura de transições)
+├── requirements.txt      # Dependências
+└── README.md             # Este arquivo
+```
+
 "# q-learning-fst" 
