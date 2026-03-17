@@ -6,6 +6,7 @@ onde o agente deve aprender a navegar dos estados iniciais até um
 estado objetivo de forma ótima.
 """
 
+import json
 import numpy as np
 from typing import Dict, List, Tuple, Optional, Set
 
@@ -182,64 +183,76 @@ class FSMEnvironment:
         )
 
 
-def create_default_fsm() -> FSMEnvironment:
+def load_fsm_from_json(
+    filepath: str,
+    goal_states: Optional[Set[str]] = None,
+    max_steps: int = 50,
+) -> FSMEnvironment:
     """
-    Cria um autômato FSM de exemplo para demonstração.
+    Carrega uma Máquina de Estados Finitos a partir de um arquivo JSON.
 
-    Estrutura do autômato (6 estados):
+    O formato JSON esperado é:
+        {
+            "initial": "nome_estado_inicial",
+            "states": [
+                {
+                    "state": "nome_estado",
+                    "transitions": [
+                        {
+                            "input": "nome_acao",
+                            "output": [...],
+                            "target": "nome_estado_destino"
+                        }
+                    ]
+                }
+            ]
+        }
 
-        S0 --a--> S1 --a--> S3 --b--> S5 (OBJETIVO)
-        |         |                     ^
-        b         b                     |
-        v         v                     a
-        S2 --a--> S4 --------b-------->S5
-
-    O caminho ótimo mais curto é: S0 -> S2 -> S4 -> S5 (3 passos)
-    Caminho alternativo: S0 -> S1 -> S3 -> S5 (3 passos, mesma distância)
-    Caminho mais longo: S0 -> S1 -> S4 -> S5 (3 passos via S1->S4)
+    Args:
+        filepath: Caminho para o arquivo JSON da FSM.
+        goal_states: Conjunto de estados objetivo. Se None, usa conjunto vazio.
+        max_steps: Limite de passos por episódio.
 
     Returns:
         Instância de FSMEnvironment configurada.
     """
-    states = ["S0", "S1", "S2", "S3", "S4", "S5"]
-    actions = ["a", "b"]
+    with open(filepath, "r", encoding="utf-8") as f:
+        data = json.load(f)
 
-    # Definir transições: (estado_atual, ação) -> próximo_estado
-    transitions = {
-        ("S0", "a"): "S1",  # S0 --a--> S1
-        ("S0", "b"): "S2",  # S0 --b--> S2
-        ("S1", "a"): "S3",  # S1 --a--> S3
-        ("S1", "b"): "S4",  # S1 --b--> S4
-        ("S2", "a"): "S4",  # S2 --a--> S4
-        ("S2", "b"): "S0",  # S2 --b--> S0 (volta ao início)
-        ("S3", "a"): "S1",  # S3 --a--> S1 (loop)
-        ("S3", "b"): "S5",  # S3 --b--> S5 (objetivo!)
-        ("S4", "a"): "S5",  # S4 --a--> S5 (objetivo!)
-        ("S4", "b"): "S2",  # S4 --b--> S2 (volta)
+    initial_state = data["initial"]
+
+    # Extrair estados e transições
+    states = []
+    transitions: Dict[Tuple[str, str], str] = {}
+    actions_set: set = set()
+
+    for state_obj in data["states"]:
+        state_name = state_obj["state"]
+        states.append(state_name)
+
+        for trans in state_obj.get("transitions", []):
+            action = trans["input"]
+            target = trans["target"]
+            actions_set.add(action)
+            transitions[(state_name, action)] = target
+
+    actions = sorted(actions_set)
+
+    # Recompensas padrão: -1.0 para todas as transições válidas
+    rewards: Dict[Tuple[str, str], float] = {
+        key: -1.0 for key in transitions
     }
 
-    # Definir recompensas
-    rewards = {
-        ("S0", "a"): -1.0,
-        ("S0", "b"): -1.0,
-        ("S1", "a"): -1.0,
-        ("S1", "b"): -1.0,
-        ("S2", "a"): -1.0,
-        ("S2", "b"): -3.0,   # Penalidade maior por voltar ao início
-        ("S3", "a"): -3.0,   # Penalidade por loop
-        ("S3", "b"): 100.0,  # Grande recompensa por alcançar o objetivo
-        ("S4", "a"): 100.0,  # Grande recompensa por alcançar o objetivo
-        ("S4", "b"): -3.0,   # Penalidade por voltar
-    }
-
-    goal_states = {"S5"}
+    if goal_states is None:
+        goal_states = set()
 
     return FSMEnvironment(
         states=states,
         actions=actions,
         transitions=transitions,
         rewards=rewards,
-        initial_state="S0",
+        initial_state=initial_state,
         goal_states=goal_states,
-        max_steps=50,
+        max_steps=max_steps,
     )
+

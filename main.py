@@ -5,11 +5,12 @@ Script principal que executa o treinamento do agente Q-Learning
 em um autômato finito e exibe os resultados.
 
 Uso:
-    python main.py
+    python main.py <caminho_fsm.json> [--goal-states S1 S2] [--max-steps 50]
 """
 
 import sys
 import os
+import argparse
 
 # Configurar encoding UTF-8 para o console do Windows
 if sys.platform == 'win32':
@@ -17,7 +18,7 @@ if sys.platform == 'win32':
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
     os.environ['PYTHONIOENCODING'] = 'utf-8'
 
-from fsm_environment import FSMEnvironment, create_default_fsm
+from fsm_environment import load_fsm_from_json
 from q_learning_agent import QLearningAgent
 from visualization import (
     plot_training_results,
@@ -32,10 +33,40 @@ def main():
     """Função principal: treina o agente e exibe resultados."""
 
     # =====================================================
+    # 0. ARGUMENTOS DA LINHA DE COMANDO
+    # =====================================================
+    parser = argparse.ArgumentParser(
+        description="Q-Learning para Máquina de Estados Finitos (FSM)"
+    )
+    parser.add_argument(
+        "fsm_file",
+        help="Caminho para o arquivo JSON da FSM",
+    )
+    parser.add_argument(
+        "--goal-states",
+        nargs="+",
+        default=None,
+        help="Estados objetivo da FSM (ex: --goal-states S5 S6)",
+    )
+    parser.add_argument(
+        "--max-steps",
+        type=int,
+        default=50,
+        help="Número máximo de passos por episódio (padrão: 50)",
+    )
+    args = parser.parse_args()
+
+    goal_states = set(args.goal_states) if args.goal_states else None
+
+    # =====================================================
     # 1. CRIAR O AMBIENTE FSM
     # =====================================================
-    print("\n[*] Criando ambiente FSM...")
-    env = create_default_fsm()
+    print(f"\n[*] Carregando FSM de: {args.fsm_file}")
+    env = load_fsm_from_json(
+        args.fsm_file,
+        goal_states=goal_states,
+        max_steps=args.max_steps,
+    )
     print(env)
 
     # =====================================================
@@ -95,3 +126,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
