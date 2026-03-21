@@ -593,3 +593,212 @@ def plot_fsm_coverage_diagram(
         print(f"  [+] Diagrama de cobertura salvo em: {save_path}")
     else:
         plt.show()
+
+
+# =====================================================================
+#  FUNÇÕES DE VISUALIZAÇÃO PARA COBERTURA DE ESTADOS
+# =====================================================================
+
+def plot_state_coverage_progress(
+    agent,
+    save_path: Optional[str] = None,
+):
+    """
+    Plota a evolução da cobertura de estados ao longo dos episódios.
+
+    Exibe 2 gráficos:
+    1. Porcentagem de cobertura de estados acumulada por episódio
+    2. Novos estados descobertos por episódio
+
+    Args:
+        agent: StateCoverageQLearningAgent treinado
+        save_path: Caminho para salvar a imagem
+    """
+    fig, axes = plt.subplots(2, 1, figsize=(12, 8))
+    fig.suptitle(
+        "Progresso da Cobertura de Estados",
+        fontsize=16, fontweight="bold"
+    )
+
+    episodes = range(1, len(agent.coverage_history) + 1)
+
+    # --- Gráfico 1: Cobertura acumulada ---
+    ax1 = axes[0]
+    ax1.plot(
+        episodes, agent.coverage_history,
+        color="#3498DB", linewidth=2.5, label="Cobertura (%)"
+    )
+    ax1.axhline(y=100, color="#E74C3C", linestyle="--", alpha=0.7, label="100% alvo")
+
+    if agent.full_coverage_episode:
+        ax1.axvline(
+            x=agent.full_coverage_episode,
+            color="#F39C12", linestyle=":", linewidth=2,
+            label=f"100% no ep. {agent.full_coverage_episode}"
+        )
+
+    ax1.set_ylabel("Cobertura (%)")
+    ax1.set_title("Cobertura de Estados Acumulada")
+    ax1.set_ylim(-5, 110)
+    ax1.legend(loc="lower right")
+    ax1.grid(True, alpha=0.3)
+
+    # --- Gráfico 2: Novos estados por episódio ---
+    ax2 = axes[1]
+    ax2.bar(
+        episodes, agent.new_states_per_episode,
+        color="#8E44AD", alpha=0.7, width=1.0
+    )
+    ax2.set_xlabel("Episódio")
+    ax2.set_ylabel("Novos Estados")
+    ax2.set_title("Estados Novos Descobertos por Episódio")
+    ax2.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+
+    if save_path:
+        plt.savefig(save_path, dpi=150, bbox_inches="tight")
+        print(f"  [+] Gráfico de cobertura de estados salvo em: {save_path}")
+    else:
+        plt.show()
+
+
+def plot_fsm_state_coverage_diagram(
+    env: FSMEnvironment,
+    covered_states,
+    all_reachable_states,
+    test_suite=None,
+    save_path: Optional[str] = None,
+):
+    """
+    Visualiza o autômato com estados cobertos vs não cobertos.
+
+    Args:
+        env: Ambiente FSM
+        covered_states: Set de nomes dos estados cobertos
+        all_reachable_states: Set de nomes dos estados alcançáveis
+        test_suite: Lista de sequências de teste (opcional, para legenda)
+        save_path: Caminho para salvar a imagem
+    """
+    if not HAS_NETWORKX:
+        print("\n  [!] networkx não instalado. Pulando diagrama.")
+        return
+
+    G = nx.MultiDiGraph()
+
+    for state in env.states:
+        G.add_node(state)
+
+    edge_labels = {}
+    for (state, action), next_state in env.transitions.items():
+        G.add_edge(state, next_state, action=action)
+        key = (state, next_state)
+        label = action
+        if key in edge_labels:
+            edge_labels[key] += f"\n{label}"
+        else:
+            edge_labels[key] = label
+
+    pos = nx.spring_layout(G, seed=42, k=2.5)
+
+    fig, ax = plt.subplots(1, 1, figsize=(14, 10))
+
+    total = len(all_reachable_states)
+    covered = len(covered_states & all_reachable_states)
+    pct = (covered / total * 100) if total > 0 else 0
+
+    ax.set_title(
+        f"Cobertura de Estados: {covered}/{total} ({pct:.0f}%)",
+        fontsize=16, fontweight="bold", pad=20,
+    )
+
+    # Cores dos nós baseadas em cobertura de estados
+    node_colors = []
+    for state in G.nodes():
+        if state not in all_reachable_states:
+            # Estado não alcançável
+            node_colors.append("#BDC3C7")  # Cinza
+        elif state == env.initial_state:
+            node_colors.append("#3498DB")  # Azul para início
+        elif state in covered_states:
+            node_colors.append("#2ECC71")  # Verde para coberto
+        else:
+            node_colors.append("#E74C3C")  # Vermelho para não coberto
+
+    nx.draw_networkx_nodes(
+        G, pos, ax=ax,
+        node_color=node_colors,
+        node_size=2000,
+        edgecolors="#2C3E50",
+        linewidths=2,
+    )
+
+    nx.draw_networkx_labels(
+        G, pos, ax=ax,
+        font_size=14,
+        font_weight="bold",
+        font_color="#2C3E50",
+    )
+
+    # Desenhar todas as arestas
+    all_edges = list(G.edges())
+    nx.draw_networkx_edges(
+        G, pos, ax=ax,
+        edgelist=all_edges,
+        edge_color="#95A5A6",
+        width=1.5,
+        style="solid",
+        arrows=True,
+        arrowsize=25,
+        arrowstyle="-|>",
+        connectionstyle="arc3,rad=0.15",
+        min_source_margin=25,
+        min_target_margin=25,
+    )
+
+    # Labels das arestas
+    nx.draw_networkx_edge_labels(
+        G, pos, ax=ax,
+        edge_labels=edge_labels,
+        font_size=9,
+        font_color="#2C3E50",
+        label_pos=0.3,
+        bbox=dict(
+            boxstyle="round,pad=0.2",
+            facecolor="white",
+            edgecolor="none",
+            alpha=0.8
+        ),
+    )
+
+    # Legenda
+    legend_elements = [
+        mpatches.Patch(color="#3498DB", label="Estado Inicial"),
+        mpatches.Patch(color="#2ECC71", label="Estado Coberto ✔"),
+        mpatches.Patch(color="#E74C3C", label="Estado Não Coberto ✘"),
+        mpatches.Patch(color="#BDC3C7", label="Estado Não Alcançável"),
+    ]
+
+    if test_suite:
+        legend_elements.append(
+            mpatches.Patch(
+                color="none",
+                label=f"Casos de teste: {len(test_suite)}"
+            )
+        )
+
+    ax.legend(
+        handles=legend_elements,
+        loc="upper left",
+        fontsize=10,
+        framealpha=0.9,
+    )
+
+    ax.axis("off")
+    plt.tight_layout()
+
+    if save_path:
+        plt.savefig(save_path, dpi=150, bbox_inches="tight")
+        print(f"  [+] Diagrama de cobertura de estados salvo em: {save_path}")
+    else:
+        plt.show()

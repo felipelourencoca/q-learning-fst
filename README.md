@@ -11,7 +11,7 @@ Neste projeto, o ambiente é modelado como um **autômato finito** carregado a p
 - **Estados** = Nós do autômato
 - **Ações** = Inputs das transições (extraídos automaticamente do JSON)
 - **Transições** = Mapeamento `(estado, ação) → próximo_estado`
-- **Objetivo** = Alcançar um estado alvo no menor número de passos (modo Q-Learning) ou cobrir todas as transições (modo cobertura)
+- **Objetivo** = Alcançar um estado alvo no menor número de passos (modo Q-Learning), cobrir todas as transições (cobertura de transições) ou cobrir todos os estados (cobertura de estados)
 
 ### Formato do arquivo JSON da FSM
 
@@ -104,16 +104,53 @@ python main_coverage.py fsm/_03_MotionLightSwitch_flattened.json --max-steps 200
 ```
 
 **Saída:**
-1. Treina o agente com foco em cobertura
+1. Treina o agente com foco em cobertura de transições
 2. Exibe **relatório de cobertura** (transições cobertas/não cobertas)
 3. Gera **suíte de testes mínima** (greedy set cover)
 4. Gera gráficos:
    - `coverage_progress.png` — Evolução da cobertura ao longo dos episódios
    - `fsm_coverage.png` — Diagrama do autômato com transições cobertas vs não cobertas
 
-## 🧪 Cobertura de Transições
+### 4. Modo Cobertura de Estados (All States)
 
-**Transition Coverage (Cobertura de Transições)**: cada transição `(estado, ação) → próximo_estado` definida na FSM deve ser exercitada pelo menos uma vez pela suíte de testes gerada.
+```bash
+python main_state_coverage.py <caminho_fsm.json> [--max-steps 50]
+```
+
+**Exemplos:**
+
+```bash
+# FSM simples (2 estados)
+python main_state_coverage.py fsm/_01_LightSwitch_flattened.json
+
+# FSM média (21 estados)
+python main_state_coverage.py fsm/_02_DimmableLightSwitch_flattened.json
+
+# FSM maior com mais passos por episódio
+python main_state_coverage.py fsm/_03_MotionLightSwitch_flattened.json --max-steps 200
+```
+
+**Saída:**
+1. Treina o agente com foco em cobertura de estados
+2. Exibe **relatório de cobertura** (estados cobertos/não cobertos)
+3. Gera **suíte de testes mínima** (greedy set cover para estados)
+4. Gera gráficos:
+   - `state_coverage_progress.png` — Evolução da cobertura de estados ao longo dos episódios
+   - `fsm_state_coverage.png` — Diagrama do autômato com estados cobertos vs não cobertos
+
+### 5. Executar testes
+
+```bash
+python test_state_coverage.py
+```
+
+Executa 5 testes automatizados verificando cobertura de estados, cálculo de alcançabilidade (BFS), e regressão dos modos existentes.
+
+## 🧪 Critérios de Cobertura
+
+### Transition Coverage (Cobertura de Transições)
+
+**Transition Coverage**: cada transição `(estado, ação) → próximo_estado` definida na FSM deve ser exercitada pelo menos uma vez pela suíte de testes gerada.
 
 A função de recompensa é adaptada:
 - **+50** por exercitar uma transição **ainda não coberta**
@@ -121,6 +158,17 @@ A função de recompensa é adaptada:
 - **-10** por ação inválida
 
 Assim, o Q-Learning aprende a explorar transições novas, gerando sequências de teste com cobertura máxima.
+
+### State Coverage (Cobertura de Estados / All States)
+
+**State Coverage**: cada estado alcançável da FSM (computado via BFS a partir do estado inicial) deve ser visitado pelo menos uma vez pela suíte de testes gerada.
+
+A função de recompensa é adaptada:
+- **+50** por visitar um estado **ainda não coberto**
+- **-1** por revisitar um estado **já coberto**
+- **-10** por ação inválida
+
+O agente computa automaticamente os estados alcançáveis usando busca em largura (BFS) a partir do estado inicial, garantindo que apenas estados realmente atingíveis sejam considerados no cálculo de cobertura.
 
 ## ⚙️ Hiperparâmetros
 
@@ -136,21 +184,25 @@ Assim, o Q-Learning aprende a explorar transições novas, gerando sequências d
 
 ```
 Q-learning-fst/
-├── fsm/                      # FSMs em formato JSON
+├── fsm/                        # FSMs em formato JSON
 │   ├── _01_LightSwitch_flattened.json
 │   ├── _02_DimmableLightSwitch_flattened.json
 │   ├── _03_MotionLightSwitch_flattened.json
 │   ├── _04_LightAndMotionSensingLightSwitch_flattened.json
 │   └── _05_PresenceSimulationLightSwitch_flattened.json
-├── fsm_environment.py        # Ambiente FSM + carregamento de JSON
-├── q_learning_agent.py       # Agente Q-Learning clássico (caminho ótimo)
-├── coverage_agent.py         # Agente Q-Learning para cobertura de transições
-├── coverage_runner.py        # Orquestrador da geração de testes
-├── visualization.py          # Gráficos e visualizações (ambos os modos)
-├── main.py                   # Script principal (modo caminho ótimo)
-├── main_coverage.py          # Script principal (modo cobertura de transições)
-├── requirements.txt          # Dependências
-└── README.md                 # Este arquivo
+├── fsm_environment.py          # Ambiente FSM + carregamento de JSON
+├── q_learning_agent.py         # Agente Q-Learning clássico (caminho ótimo)
+├── coverage_agent.py           # Agente Q-Learning para cobertura de transições
+├── coverage_runner.py          # Orquestrador de testes (cobertura de transições)
+├── state_coverage_agent.py     # Agente Q-Learning para cobertura de estados
+├── state_coverage_runner.py    # Orquestrador de testes (cobertura de estados)
+├── visualization.py            # Gráficos e visualizações (todos os modos)
+├── main.py                     # Script principal (modo caminho ótimo)
+├── main_coverage.py            # Script principal (modo cobertura de transições)
+├── main_state_coverage.py      # Script principal (modo cobertura de estados)
+├── test_state_coverage.py      # Testes automatizados
+├── requirements.txt            # Dependências
+└── README.md                   # Este arquivo
 ```
 
 "# q-learning-fst" 
