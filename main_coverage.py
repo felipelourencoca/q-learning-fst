@@ -98,10 +98,12 @@ def main():
     # =====================================================
     print("\n[+] Gerando visualizações...")
 
+    os.makedirs("results", exist_ok=True)
+
     # Progresso da cobertura ao longo dos episódios
     plot_coverage_progress(
         runner.agent,
-        save_path="coverage_progress.png"
+        save_path="results/coverage_progress.png"
     )
 
     # Diagrama do autômato com cobertura
@@ -109,13 +111,13 @@ def main():
         env,
         covered_transitions=runner.agent.covered_transitions,
         test_suite=runner.test_suite,
-        save_path="fsm_coverage.png"
+        save_path="results/fsm_coverage.png"
     )
 
     print("\n[OK] Execução concluída com sucesso!")
     print("   Arquivos gerados:")
-    print("   - coverage_progress.png  (evolução da cobertura)")
-    print("   - fsm_coverage.png       (diagrama com transições cobertas)")
+    print("   - results/coverage_progress.png  (evolução da cobertura)")
+    print("   - results/fsm_coverage.png       (diagrama com transições cobertas)")
 
 
 if __name__ == "__main__":

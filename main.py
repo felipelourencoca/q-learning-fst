@@ -108,20 +108,22 @@ def main():
     # =====================================================
     print("\n[+] Gerando visualizacoes...")
 
+    os.makedirs("results", exist_ok=True)
+
     # Gráfico de convergência do treinamento
-    plot_training_results(agent, window_size=50, save_path="training_results.png")
+    plot_training_results(agent, window_size=50, save_path="results/training_results.png")
 
     # Heatmap da Q-Table
-    plot_q_table_heatmap(agent, save_path="q_table_heatmap.png")
+    plot_q_table_heatmap(agent, save_path="results/q_table_heatmap.png")
 
     # Diagrama do autômato com caminho ótimo
-    plot_fsm_diagram(env, best_path=best_path, save_path="fsm_diagram.png")
+    plot_fsm_diagram(env, best_path=best_path, save_path="results/fsm_diagram.png")
 
     print("\n[OK] Execucao concluida com sucesso!")
     print("   Arquivos gerados:")
-    print("   - training_results.png  (graficos de convergencia)")
-    print("   - q_table_heatmap.png   (heatmap da Q-Table)")
-    print("   - fsm_diagram.png       (diagrama do automato)")
+    print("   - results/training_results.png  (graficos de convergencia)")
+    print("   - results/q_table_heatmap.png   (heatmap da Q-Table)")
+    print("   - results/fsm_diagram.png       (diagrama do automato)")
 
 
 if __name__ == "__main__":

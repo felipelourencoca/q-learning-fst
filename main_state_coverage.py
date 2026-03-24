@@ -98,10 +98,12 @@ def main():
     # =====================================================
     print("\n[+] Gerando visualizações...")
 
+    os.makedirs("results", exist_ok=True)
+
     # Progresso da cobertura ao longo dos episódios
     plot_state_coverage_progress(
         runner.agent,
-        save_path="state_coverage_progress.png"
+        save_path="results/state_coverage_progress.png"
     )
 
     # Diagrama do autômato com cobertura de estados
@@ -110,13 +112,13 @@ def main():
         covered_states=runner.agent.covered_states,
         all_reachable_states=runner.agent.all_reachable_states,
         test_suite=runner.test_suite,
-        save_path="fsm_state_coverage.png"
+        save_path="results/fsm_state_coverage.png"
     )
 
     print("\n[OK] Execução concluída com sucesso!")
     print("   Arquivos gerados:")
-    print("   - state_coverage_progress.png  (evolução da cobertura de estados)")
-    print("   - fsm_state_coverage.png       (diagrama com estados cobertos)")
+    print("   - results/state_coverage_progress.png  (evolução da cobertura de estados)")
+    print("   - results/fsm_state_coverage.png       (diagrama com estados cobertos)")
 
 
 if __name__ == "__main__":
