@@ -21,9 +21,9 @@ if sys.platform == 'win32':
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
     os.environ['PYTHONIOENCODING'] = 'utf-8'
 
-from fsm_environment import load_fsm_from_json
-from coverage_runner import CoverageRunner
-from visualization import (
+from src.fsm_environment import load_fsm_from_json
+from src.coverage_runner import CoverageRunner
+from src.visualization import (
     plot_coverage_progress,
     plot_fsm_coverage_diagram,
     plot_q_table_heatmap,

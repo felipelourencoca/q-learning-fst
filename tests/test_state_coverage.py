@@ -9,17 +9,20 @@ Verifica que:
 import sys
 import os
 
+# Garantir que o diretório raiz do projeto esteja no sys.path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 # Configurar encoding UTF-8 para o console do Windows
 if sys.platform == 'win32':
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
     os.environ['PYTHONIOENCODING'] = 'utf-8'
 
-from fsm_environment import load_fsm_from_json
-from state_coverage_agent import StateCoverageQLearningAgent
-from state_coverage_runner import StateCoverageRunner
-from coverage_agent import CoverageQLearningAgent
-from q_learning_agent import QLearningAgent
+from src.fsm_environment import load_fsm_from_json
+from src.state_coverage_agent import StateCoverageQLearningAgent
+from src.state_coverage_runner import StateCoverageRunner
+from src.coverage_agent import CoverageQLearningAgent
+from src.q_learning_agent import QLearningAgent
 
 
 def test_state_coverage_simple():

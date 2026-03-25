@@ -1,22 +1,22 @@
 """
-Módulo Runner de Cobertura
+Módulo Runner de Cobertura de Estados
 
-Orquestra a geração de suítes de teste com cobertura de transições
-usando o CoverageQLearningAgent.
+Orquestra a geração de suítes de teste com cobertura de estados
+usando o StateCoverageQLearningAgent.
 """
 
 from typing import List, Tuple, Optional
-from fsm_environment import FSMEnvironment
-from coverage_agent import CoverageQLearningAgent
+from .fsm_environment import FSMEnvironment
+from .state_coverage_agent import StateCoverageQLearningAgent
 
 
-class CoverageRunner:
+class StateCoverageRunner:
     """
-    Executa o agente de cobertura e gera relatórios e suítes de teste.
+    Executa o agente de cobertura de estados e gera relatórios e suítes de teste.
 
     Attributes:
         env: O ambiente FSM
-        agent: O agente de cobertura Q-Learning
+        agent: O agente de cobertura de estados Q-Learning
         test_suite: A suíte de testes gerada após o treinamento
     """
 
@@ -31,7 +31,7 @@ class CoverageRunner:
         n_episodes: int = 500,
     ):
         """
-        Inicializa o runner de cobertura.
+        Inicializa o runner de cobertura de estados.
 
         Args:
             env: Ambiente FSM para teste
@@ -44,7 +44,7 @@ class CoverageRunner:
         """
         self.env = env
         self.n_episodes = n_episodes
-        self.agent = CoverageQLearningAgent(
+        self.agent = StateCoverageQLearningAgent(
             env=env,
             alpha=alpha,
             gamma=gamma,
@@ -78,38 +78,46 @@ class CoverageRunner:
     def print_test_suite(self):
         """Imprime a suíte de testes gerada de forma legível."""
         print("\n" + "=" * 65)
-        print("  SUÍTE DE TESTES GERADA (Cobertura de Transições)")
+        print("  SUÍTE DE TESTES GERADA (Cobertura de Estados)")
         print("=" * 65)
 
         if not self.test_suite:
             print("  [!] Nenhuma suíte de teste gerada. Execute run() primeiro.")
             return
 
-        total_transitions_covered = set()
+        total_states_covered = set()
 
         for tc_idx, sequence in enumerate(self.test_suite):
             print(f"\n  ── Caso de Teste {tc_idx + 1} ──")
             print(f"  Início: {self.env.initial_state}")
 
-            transitions_in_tc = set()
+            states_in_tc = set()
             for step_idx, (s, a, ns) in enumerate(sequence):
-                is_new = (s, a, ns) not in total_transitions_covered
-                marker = " ★ NOVA" if is_new else ""
-                print(f"    Passo {step_idx + 1}: {s} --[{a}]--> {ns}{marker}")
-                transitions_in_tc.add((s, a, ns))
-                total_transitions_covered.add((s, a, ns))
+                is_new_src = s not in total_states_covered
+                is_new_dst = ns not in total_states_covered
+                markers = []
+                if is_new_src:
+                    markers.append(f"{s} ★")
+                if is_new_dst:
+                    markers.append(f"{ns} ★")
+                marker_str = f" NOVO({', '.join(markers)})" if markers else ""
+                print(f"    Passo {step_idx + 1}: {s} --[{a}]--> {ns}{marker_str}")
+                states_in_tc.add(s)
+                states_in_tc.add(ns)
+                total_states_covered.add(s)
+                total_states_covered.add(ns)
 
-            print(f"  Transições neste caso: {len(transitions_in_tc)}")
+            print(f"  Estados neste caso: {len(states_in_tc)}")
 
         print(f"\n  ── Resumo ──")
         print(f"  Total de casos de teste: {len(self.test_suite)}")
-        print(f"  Total de transições cobertas: "
-              f"{len(total_transitions_covered)}/{self.agent.total_transitions}")
+        print(f"  Total de estados cobertos: "
+              f"{len(total_states_covered)}/{self.agent.total_states}")
         print(f"  Cobertura: {self.agent.coverage_percentage:.1f}%")
         print("=" * 65)
 
     def print_coverage_report(self):
-        """Imprime o relatório de cobertura de transições."""
+        """Imprime o relatório de cobertura de estados."""
         print(self.agent.get_coverage_report())
 
     def print_test_suite_as_actions(self):

@@ -16,8 +16,8 @@ try:
 except ImportError:
     HAS_NETWORKX = False
 
-from fsm_environment import FSMEnvironment
-from q_learning_agent import QLearningAgent
+from .fsm_environment import FSMEnvironment
+from .q_learning_agent import QLearningAgent
 
 
 def plot_training_results(

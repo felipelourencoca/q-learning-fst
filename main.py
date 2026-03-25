@@ -18,9 +18,9 @@ if sys.platform == 'win32':
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
     os.environ['PYTHONIOENCODING'] = 'utf-8'
 
-from fsm_environment import load_fsm_from_json
-from q_learning_agent import QLearningAgent
-from visualization import (
+from src.fsm_environment import load_fsm_from_json
+from src.q_learning_agent import QLearningAgent
+from src.visualization import (
     plot_training_results,
     plot_fsm_diagram,
     plot_q_table_heatmap,

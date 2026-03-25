@@ -1,41 +1,41 @@
 """
-Módulo do Agente Q-Learning para Cobertura de Transições
+Módulo do Agente Q-Learning para Cobertura de Estados
 
 Adapta o algoritmo Q-Learning para gerar sequências de teste que
-maximizem a cobertura de transições de uma Máquina de Estados Finitos.
+maximizem a cobertura de estados de uma Máquina de Estados Finitos.
 
-Critério de cobertura: Transition Coverage (Cobertura de Transições)
-- O agente recebe recompensa positiva ao exercitar transições ainda não cobertas
-- O objetivo é cobrir 100% das transições definidas na FSM
+Critério de cobertura: State Coverage (Cobertura de Estados / All States)
+- O agente recebe recompensa positiva ao visitar estados ainda não cobertos
+- O objetivo é cobrir 100% dos estados alcançáveis da FSM
 """
 
 import numpy as np
+from collections import deque
 from typing import List, Tuple, Set, Dict, Optional
-from fsm_environment import FSMEnvironment
+from .fsm_environment import FSMEnvironment
 
 
-class CoverageQLearningAgent:
+class StateCoverageQLearningAgent:
     """
-    Agente Q-Learning adaptado para gerar testes com cobertura de transições.
+    Agente Q-Learning adaptado para gerar testes com cobertura de estados.
 
-    Diferenças em relação ao QLearningAgent original:
-    - A recompensa é baseada em cobertura (transição nova = +50, já coberta = -1)
-    - Mantém tracking global das transições cobertas ao longo dos episódios
+    Diferenças em relação ao CoverageQLearningAgent (cobertura de transições):
+    - A recompensa é baseada em estados visitados (estado novo = +50, já visitado = -1)
+    - Mantém tracking global dos estados cobertos ao longo dos episódios
     - Cada episódio gera uma "sequência de teste" independente
-    - Pode gerar uma suíte de testes mínima que cobre todas as transições
+    - Pode gerar uma suíte de testes mínima que cobre todos os estados
 
     Attributes:
         env: O ambiente FSM
-        all_transitions: Conjunto de todas as transições possíveis da FSM
-        covered_transitions: Conjunto de transições já cobertas
+        all_reachable_states: Conjunto de todos os estados alcançáveis a partir do inicial
+        covered_states: Conjunto de estados já cobertos
         coverage_history: Histórico de % de cobertura por episódio
     """
 
-    # Recompensas para cobertura
-    REWARD_NEW_TRANSITION = 50.0     # Transição nova coberta
-    REWARD_OLD_TRANSITION = -1.0     # Transição já coberta
+    # Recompensas para cobertura de estados
+    REWARD_NEW_STATE = 50.0          # Estado novo coberto
+    REWARD_OLD_STATE = -1.0          # Estado já coberto
     REWARD_INVALID_ACTION = -10.0    # Ação inválida
-    REWARD_GOAL_REACHED = 10.0       # Bônus por alcançar estado objetivo
 
     def __init__(
         self,
@@ -47,7 +47,7 @@ class CoverageQLearningAgent:
         epsilon_decay: float = 0.995,
     ):
         """
-        Inicializa o agente de cobertura.
+        Inicializa o agente de cobertura de estados.
 
         Args:
             env: Ambiente FSM para interação
@@ -67,37 +67,57 @@ class CoverageQLearningAgent:
         # Q-Table
         self.q_table = np.zeros((env.n_states, env.n_actions))
 
-        # === Tracking de cobertura ===
-        # Todas as transições definidas na FSM: {(estado, ação, próximo_estado)}
-        self.all_transitions: Set[Tuple[str, str, str]] = set()
-        for (state, action), next_state in env.transitions.items():
-            self.all_transitions.add((state, action, next_state))
-
-        self.total_transitions = len(self.all_transitions)
-        self.covered_transitions: Set[Tuple[str, str, str]] = set()
+        # === Tracking de cobertura de estados ===
+        # Computar estados alcançáveis via BFS a partir do estado inicial
+        self.all_reachable_states: Set[str] = self._compute_reachable_states()
+        self.total_states = len(self.all_reachable_states)
+        self.covered_states: Set[str] = set()
 
         # Históricos
         self.coverage_history: List[float] = []          # % cobertura por episódio
         self.rewards_history: List[float] = []
         self.steps_history: List[int] = []
         self.epsilon_history: List[float] = []
-        self.new_transitions_per_episode: List[int] = [] # transições novas por episódio
+        self.new_states_per_episode: List[int] = []      # estados novos por episódio
         self.episode_sequences: List[List[Tuple[str, str, str]]] = []  # sequências geradas
 
         # Episódio onde atingiu 100% de cobertura
         self.full_coverage_episode: Optional[int] = None
 
-    @property
-    def coverage_percentage(self) -> float:
-        """Retorna a porcentagem atual de cobertura de transições."""
-        if self.total_transitions == 0:
-            return 100.0
-        return (len(self.covered_transitions) / self.total_transitions) * 100.0
+    def _compute_reachable_states(self) -> Set[str]:
+        """
+        Computa o conjunto de estados alcançáveis a partir do estado inicial
+        usando BFS (Busca em Largura).
+
+        Returns:
+            Conjunto de nomes dos estados alcançáveis.
+        """
+        reachable = set()
+        queue = deque([self.env.initial_state])
+        reachable.add(self.env.initial_state)
+
+        while queue:
+            current = queue.popleft()
+            for action in self.env.get_valid_actions(current):
+                if (current, action) in self.env.transitions:
+                    next_state = self.env.transitions[(current, action)]
+                    if next_state not in reachable:
+                        reachable.add(next_state)
+                        queue.append(next_state)
+
+        return reachable
 
     @property
-    def uncovered_transitions(self) -> Set[Tuple[str, str, str]]:
-        """Retorna o conjunto de transições ainda não cobertas."""
-        return self.all_transitions - self.covered_transitions
+    def coverage_percentage(self) -> float:
+        """Retorna a porcentagem atual de cobertura de estados."""
+        if self.total_states == 0:
+            return 100.0
+        return (len(self.covered_states) / self.total_states) * 100.0
+
+    @property
+    def uncovered_states(self) -> Set[str]:
+        """Retorna o conjunto de estados ainda não cobertos."""
+        return self.all_reachable_states - self.covered_states
 
     def choose_action(self, state: str) -> str:
         """
@@ -128,11 +148,11 @@ class CoverageQLearningAgent:
             best_action_idx = valid_action_indices[best_local_idx]
             return self.env.idx_to_action[best_action_idx]
 
-    def _compute_coverage_reward(
+    def _compute_state_coverage_reward(
         self, state: str, action: str, next_state: str, is_valid: bool
     ) -> float:
         """
-        Calcula a recompensa baseada em cobertura de transições.
+        Calcula a recompensa baseada em cobertura de estados.
 
         Args:
             state: Estado atual
@@ -146,20 +166,15 @@ class CoverageQLearningAgent:
         if not is_valid:
             return self.REWARD_INVALID_ACTION
 
-        transition = (state, action, next_state)
         reward = 0.0
 
-        if transition not in self.covered_transitions:
-            # Transição nova! Alta recompensa
-            reward += self.REWARD_NEW_TRANSITION
-            self.covered_transitions.add(transition)
+        if next_state not in self.covered_states:
+            # Estado novo! Alta recompensa
+            reward += self.REWARD_NEW_STATE
+            self.covered_states.add(next_state)
         else:
-            # Já coberta
-            reward += self.REWARD_OLD_TRANSITION
-
-        # Bônus por atingir estado objetivo
-        if next_state in self.env.goal_states:
-            reward += self.REWARD_GOAL_REACHED
+            # Já coberto
+            reward += self.REWARD_OLD_STATE
 
         return reward
 
@@ -219,7 +234,7 @@ class CoverageQLearningAgent:
         print_interval: int = 50,
     ) -> Dict[str, List]:
         """
-        Executa o treinamento focado em cobertura de transições.
+        Executa o treinamento focado em cobertura de estados.
 
         Cada episódio gera uma sequência de teste. A cobertura é
         acumulada globalmente entre os episódios.
@@ -234,12 +249,15 @@ class CoverageQLearningAgent:
         """
         if verbose:
             print("=" * 65)
-            print("  Q-LEARNING PARA COBERTURA DE TRANSIÇÕES")
+            print("  Q-LEARNING PARA COBERTURA DE ESTADOS")
             print("=" * 65)
-            print(f"  Total de transições na FSM: {self.total_transitions}")
+            print(f"  Total de estados alcançáveis: {self.total_states}")
             print(f"  Episódios: {n_episodes}")
             print(f"  α={self.alpha}  γ={self.gamma}  ε₀={self.epsilon}")
             print("=" * 65)
+
+        # O estado inicial é automaticamente coberto
+        self.covered_states.add(self.env.initial_state)
 
         for episode in range(n_episodes):
             state = self.env.reset()
@@ -247,7 +265,7 @@ class CoverageQLearningAgent:
             steps = 0
             done = False
             episode_sequence = []
-            coverage_before = len(self.covered_transitions)
+            coverage_before = len(self.covered_states)
 
             while not done:
                 action = self.choose_action(state)
@@ -256,8 +274,8 @@ class CoverageQLearningAgent:
                 next_state, _, env_done, info = self.env.step(action)
                 is_valid = not info.get("invalid_action", False)
 
-                # Recompensa baseada em cobertura
-                reward = self._compute_coverage_reward(
+                # Recompensa baseada em cobertura de estados
+                reward = self._compute_state_coverage_reward(
                     state, action, next_state, is_valid
                 )
 
@@ -277,14 +295,14 @@ class CoverageQLearningAgent:
             self.decay_epsilon()
 
             # Métricas
-            new_trans = len(self.covered_transitions) - coverage_before
+            new_states = len(self.covered_states) - coverage_before
             coverage_pct = self.coverage_percentage
 
             self.rewards_history.append(total_reward)
             self.steps_history.append(steps)
             self.epsilon_history.append(self.epsilon)
             self.coverage_history.append(coverage_pct)
-            self.new_transitions_per_episode.append(new_trans)
+            self.new_states_per_episode.append(new_states)
             self.episode_sequences.append(episode_sequence)
 
             # Marcar episódio de 100% de cobertura
@@ -296,8 +314,8 @@ class CoverageQLearningAgent:
                 print(
                     f"  Ep {episode + 1:5d}/{n_episodes} | "
                     f"Cobertura: {coverage_pct:5.1f}% "
-                    f"({len(self.covered_transitions)}/{self.total_transitions}) | "
-                    f"Novas: {new_trans} | "
+                    f"({len(self.covered_states)}/{self.total_states}) | "
+                    f"Novos: {new_states} | "
                     f"ε: {self.epsilon:.4f}"
                 )
 
@@ -305,16 +323,16 @@ class CoverageQLearningAgent:
             if (self.full_coverage_episode is not None
                     and episode + 1 >= self.full_coverage_episode + 50):
                 if verbose:
-                    print(f"\n  [!] 100% cobertura atingida no episódio "
+                    print(f"\n  [!] 100% cobertura de estados atingida no episódio "
                           f"{self.full_coverage_episode}. "
                           f"Encerrando treinamento no episódio {episode + 1}.")
                 break
 
         if verbose:
             print("=" * 65)
-            print("  TREINAMENTO DE COBERTURA CONCLUÍDO!")
+            print("  TREINAMENTO DE COBERTURA DE ESTADOS CONCLUÍDO!")
             print(f"  Cobertura final: {self.coverage_percentage:.1f}% "
-                  f"({len(self.covered_transitions)}/{self.total_transitions})")
+                  f"({len(self.covered_states)}/{self.total_states})")
             if self.full_coverage_episode:
                 print(f"  100% atingido no episódio: {self.full_coverage_episode}")
             print("=" * 65)
@@ -324,7 +342,7 @@ class CoverageQLearningAgent:
             "steps": self.steps_history,
             "epsilons": self.epsilon_history,
             "coverage": self.coverage_history,
-            "new_transitions": self.new_transitions_per_episode,
+            "new_states": self.new_states_per_episode,
         }
 
     def generate_test_suite(self) -> List[List[Tuple[str, str, str]]]:
@@ -332,26 +350,30 @@ class CoverageQLearningAgent:
         Gera uma suíte de testes mínima a partir dos episódios de treinamento.
 
         Seleciona o menor subconjunto de episódios cujas sequências,
-        juntas, cobrem todas as transições da FSM (greedy set cover).
+        juntas, cobrem todos os estados da FSM (greedy set cover).
 
         Returns:
             Lista de sequências de teste, onde cada sequência é uma
             lista de tuplas (estado, ação, próximo_estado).
         """
-        # Transições cobertas por cada episódio
+        # Estados cobertos por cada episódio
         episode_coverage = []
         for seq in self.episode_sequences:
-            transitions_in_ep = set()
+            states_in_ep = set()
             for (s, a, ns) in seq:
-                transitions_in_ep.add((s, a, ns))
-            episode_coverage.append(transitions_in_ep)
+                states_in_ep.add(s)
+                states_in_ep.add(ns)
+            # Incluir o estado inicial (sempre começa lá)
+            if seq:
+                states_in_ep.add(seq[0][0])
+            episode_coverage.append(states_in_ep)
 
         # Greedy set cover
-        remaining = set(self.covered_transitions)
+        remaining = set(self.covered_states)
         selected_indices = []
 
         while remaining:
-            # Encontrar episódio que cobre mais transições restantes
+            # Encontrar episódio que cobre mais estados restantes
             best_idx = -1
             best_count = 0
             for i, cov in enumerate(episode_coverage):
@@ -375,35 +397,35 @@ class CoverageQLearningAgent:
 
     def get_coverage_report(self) -> str:
         """
-        Gera um relatório textual de cobertura de transições.
+        Gera um relatório textual de cobertura de estados.
 
         Returns:
             String formatada com o relatório.
         """
         lines = []
         lines.append("=" * 65)
-        lines.append("  RELATÓRIO DE COBERTURA DE TRANSIÇÕES")
+        lines.append("  RELATÓRIO DE COBERTURA DE ESTADOS")
         lines.append("=" * 65)
-        lines.append(f"  Total de transições na FSM: {self.total_transitions}")
-        lines.append(f"  Transições cobertas:        {len(self.covered_transitions)}")
-        lines.append(f"  Cobertura:                  {self.coverage_percentage:.1f}%")
+        lines.append(f"  Total de estados alcançáveis: {self.total_states}")
+        lines.append(f"  Estados cobertos:             {len(self.covered_states)}")
+        lines.append(f"  Cobertura:                    {self.coverage_percentage:.1f}%")
         lines.append("")
 
-        # Listar transições cobertas
-        lines.append("  ✔ Transições cobertas:")
-        for (s, a, ns) in sorted(self.covered_transitions):
-            lines.append(f"     {s} --[{a}]--> {ns}")
+        # Listar estados cobertos
+        lines.append("  ✔ Estados cobertos:")
+        for state in sorted(self.covered_states):
+            lines.append(f"     {state}")
 
-        # Listar transições não cobertas
-        uncovered = self.uncovered_transitions
+        # Listar estados não cobertos
+        uncovered = self.uncovered_states
         if uncovered:
             lines.append("")
-            lines.append("  ✘ Transições NÃO cobertas:")
-            for (s, a, ns) in sorted(uncovered):
-                lines.append(f"     {s} --[{a}]--> {ns}")
+            lines.append("  ✘ Estados NÃO cobertos:")
+            for state in sorted(uncovered):
+                lines.append(f"     {state}")
         else:
             lines.append("")
-            lines.append("  ✔ TODAS as transições foram cobertas!")
+            lines.append("  ✔ TODOS os estados alcançáveis foram cobertos!")
 
         if self.full_coverage_episode:
             lines.append(f"\n  100% cobertura atingida no episódio: "

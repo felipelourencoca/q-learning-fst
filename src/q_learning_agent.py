@@ -7,7 +7,7 @@ de navegação em uma Máquina de Estados Finitos.
 
 import numpy as np
 from typing import List, Tuple, Optional, Dict
-from fsm_environment import FSMEnvironment
+from .fsm_environment import FSMEnvironment
 
 
 class QLearningAgent:

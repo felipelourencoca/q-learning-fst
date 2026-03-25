@@ -141,7 +141,7 @@ python main_state_coverage.py fsm/_03_MotionLightSwitch_flattened.json --max-ste
 ### 5. Executar testes
 
 ```bash
-python test_state_coverage.py
+python tests/test_state_coverage.py
 ```
 
 Executa 5 testes automatizados verificando cobertura de estados, cálculo de alcançabilidade (BFS), e regressão dos modos existentes.
@@ -184,25 +184,29 @@ O agente computa automaticamente os estados alcançáveis usando busca em largur
 
 ```
 Q-learning-fst/
-├── fsm/                        # FSMs em formato JSON
+├── src/                           # Código-fonte do projeto
+│   ├── __init__.py
+│   ├── fsm_environment.py         # Ambiente FSM + carregamento de JSON
+│   ├── q_learning_agent.py        # Agente Q-Learning clássico (caminho ótimo)
+│   ├── coverage_agent.py          # Agente Q-Learning para cobertura de transições
+│   ├── state_coverage_agent.py    # Agente Q-Learning para cobertura de estados
+│   ├── coverage_runner.py         # Orquestrador de testes (cobertura de transições)
+│   ├── state_coverage_runner.py   # Orquestrador de testes (cobertura de estados)
+│   └── visualization.py          # Gráficos e visualizações (todos os modos)
+├── tests/                         # Testes automatizados
+│   ├── __init__.py
+│   └── test_state_coverage.py     # Testes de cobertura de estados e regressão
+├── fsm/                           # FSMs em formato JSON
 │   ├── _01_LightSwitch_flattened.json
 │   ├── _02_DimmableLightSwitch_flattened.json
 │   ├── _03_MotionLightSwitch_flattened.json
 │   ├── _04_LightAndMotionSensingLightSwitch_flattened.json
 │   └── _05_PresenceSimulationLightSwitch_flattened.json
-├── fsm_environment.py          # Ambiente FSM + carregamento de JSON
-├── q_learning_agent.py         # Agente Q-Learning clássico (caminho ótimo)
-├── coverage_agent.py           # Agente Q-Learning para cobertura de transições
-├── coverage_runner.py          # Orquestrador de testes (cobertura de transições)
-├── state_coverage_agent.py     # Agente Q-Learning para cobertura de estados
-├── state_coverage_runner.py    # Orquestrador de testes (cobertura de estados)
-├── visualization.py            # Gráficos e visualizações (todos os modos)
-├── main.py                     # Script principal (modo caminho ótimo)
-├── main_coverage.py            # Script principal (modo cobertura de transições)
-├── main_state_coverage.py      # Script principal (modo cobertura de estados)
-├── test_state_coverage.py      # Testes automatizados
-├── requirements.txt            # Dependências
-└── README.md                   # Este arquivo
+├── main.py                        # Script principal (modo caminho ótimo)
+├── main_coverage.py               # Script principal (modo cobertura de transições)
+├── main_state_coverage.py         # Script principal (modo cobertura de estados)
+├── requirements.txt               # Dependências
+└── README.md                      # Este arquivo
 ```
 
 "# q-learning-fst" 
