@@ -138,7 +138,35 @@ python main_state_coverage.py fsm/_03_MotionLightSwitch_flattened.json --max-ste
    - `state_coverage_progress.png` — Evolução da cobertura de estados ao longo dos episódios
    - `fsm_state_coverage.png` — Diagrama do autômato com estados cobertos vs não cobertos
 
-### 5. Executar testes
+### 5. Experimento comparativo (All States vs All Transitions)
+
+O script `run_experiment.py` executa ambos os métodos de cobertura sobre as mesmas FSMs, com os mesmos hiperparâmetros, por múltiplas repetições com sementes aleatórias controladas. Os resultados são exportados em formato estruturado (CSV + JSON).
+
+```bash
+# Experimento completo (30 repetições, FSMs 01-03)
+python run_experiment.py
+
+# Experimento reduzido para teste rápido
+python run_experiment.py --n-repetitions 3 --fsm fsm/_01_LightSwitch_flattened.json
+
+# Com todos os parâmetros configuráveis
+python run_experiment.py --n-repetitions 30 --n-episodes 1000 --max-steps 100 --epsilon-decay 0.995
+```
+
+**Saída:**
+```
+results/experiment_YYYYMMDD_HHMMSS/
+├── config.json                          # Configuração usada (hiperparâmetros, seeds, FSMs)
+├── summary.csv                          # Uma linha por (FSM, método, seed)
+└── <fsm_name>/
+    ├── all_transitions_seed_01.json     # Métricas completas por execução
+    ├── all_states_seed_01.json
+    └── ...
+```
+
+O `summary.csv` contém as colunas: `fsm`, `method`, `seed`, `coverage_final`, `episode_full_coverage`, `total_episodes`, `total_steps`, `test_suite_size`, `execution_time_s`.
+
+### 6. Executar testes
 
 ```bash
 python tests/test_state_coverage.py
@@ -172,13 +200,17 @@ O agente computa automaticamente os estados alcançáveis usando busca em largur
 
 ## ⚙️ Hiperparâmetros
 
+Os hiperparâmetros experimentais são centralizados em `src/experiment_config.py` (`ExperimentConfig`), garantindo condições idênticas para ambos os métodos de cobertura.
+
 | Parâmetro | Valor Padrão | Descrição |
 |-----------|-------------|-----------|
 | `α` (alpha) | 0.1 | Taxa de aprendizado |
 | `γ` (gamma) | 0.95 | Fator de desconto |
-| `ε` (epsilon) | 1.0 → 0.01 | Taxa de exploração (com decay) |
-| `ε decay` | 0.995 | Decaimento por episódio |
-| Episódios | 1000 | Número de episódios de treino |
+| `ε` (epsilon) | 1.0 → 0.05 | Taxa de exploração (com decay) |
+| `ε decay` | 0.99 | Decaimento por episódio |
+| Episódios | 500 | Número máximo de episódios de treino |
+| Repetições | 30 | Número de repetições por (FSM, método) |
+| Seed | 1..N | Sementes sequenciais para reprodutibilidade |
 
 ## 📁 Estrutura do Projeto
 
@@ -187,15 +219,17 @@ Q-learning-fst/
 ├── src/                           # Código-fonte do projeto
 │   ├── __init__.py
 │   ├── fsm_environment.py         # Ambiente FSM + carregamento de JSON
+│   ├── experiment_config.py       # Configuração experimental centralizada + set_seed()
 │   ├── q_learning_agent.py        # Agente Q-Learning clássico (caminho ótimo)
 │   ├── coverage_agent.py          # Agente Q-Learning para cobertura de transições
 │   ├── state_coverage_agent.py    # Agente Q-Learning para cobertura de estados
 │   ├── coverage_runner.py         # Orquestrador de testes (cobertura de transições)
 │   ├── state_coverage_runner.py   # Orquestrador de testes (cobertura de estados)
-│   └── visualization.py          # Gráficos e visualizações (todos os modos)
+│   └── visualization.py           # Gráficos e visualizações (todos os modos)
 ├── tests/                         # Testes automatizados
 │   ├── __init__.py
-│   └── test_state_coverage.py     # Testes de cobertura de estados e regressão
+│   ├── test_state_coverage.py     # Testes de cobertura de estados e regressão
+│   └── test_reproducibility.py    # Teste de reprodutibilidade com seed
 ├── fsm/                           # FSMs em formato JSON
 │   ├── _01_LightSwitch_flattened.json
 │   ├── _02_DimmableLightSwitch_flattened.json
@@ -205,8 +239,7 @@ Q-learning-fst/
 ├── main.py                        # Script principal (modo caminho ótimo)
 ├── main_coverage.py               # Script principal (modo cobertura de transições)
 ├── main_state_coverage.py         # Script principal (modo cobertura de estados)
+├── run_experiment.py              # Experimento comparativo (All States vs All Transitions)
 ├── requirements.txt               # Dependências
 └── README.md                      # Este arquivo
 ```
-
-"# q-learning-fst" 

@@ -7,6 +7,7 @@ usando o StateCoverageQLearningAgent.
 
 from typing import List, Tuple, Optional
 from .fsm_environment import FSMEnvironment
+from .experiment_config import set_seed
 from .state_coverage_agent import StateCoverageQLearningAgent
 
 
@@ -54,16 +55,20 @@ class StateCoverageRunner:
         )
         self.test_suite: List[List[Tuple[str, str, str]]] = []
 
-    def run(self, verbose: bool = True) -> dict:
+    def run(self, verbose: bool = True, seed: Optional[int] = None) -> dict:
         """
         Executa o treinamento e gera a suíte de testes.
 
         Args:
             verbose: Se True, imprime progresso
+            seed: Semente aleatória para reprodutibilidade (opcional)
 
         Returns:
             Dicionário com histórico de treinamento.
         """
+        if seed is not None:
+            set_seed(seed)
+
         # 1. Treinar o agente
         history = self.agent.train(
             n_episodes=self.n_episodes,
