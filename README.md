@@ -158,15 +158,27 @@ python run_experiment.py --n-repetitions 30 --n-episodes 1000 --max-steps 100 --
 results/experiment_YYYYMMDD_HHMMSS/
 ├── config.json                          # Configuração usada (hiperparâmetros, seeds, FSMs)
 ├── summary.csv                          # Uma linha por (FSM, método, seed)
+├── statistical_report.txt               # Relatório estatístico (gerado automaticamente)
+├── statistical_results.json             # Estatísticas em formato JSON
 └── <fsm_name>/
-    ├── all_transitions_seed_01.json     # Métricas completas por execução
+    ├── all_transitions_seed_01.json     # Métricas completas + hiperparâmetros
     ├── all_states_seed_01.json
     └── ...
 ```
 
 O `summary.csv` contém as colunas: `fsm`, `method`, `seed`, `coverage_final`, `episode_full_coverage`, `total_episodes`, `total_steps`, `test_suite_size`, `execution_time_s`.
 
-### 6. Executar testes
+Ao final da execução, o relatório estatístico é gerado automaticamente com média, desvio padrão, intervalo de confiança de 95% e teste de Mann-Whitney U por métrica e por FSM.
+
+### 6. Análise estatística sobre resultados existentes
+
+```bash
+python -m src.analyze_results results/experiment_YYYYMMDD_HHMMSS/
+```
+
+Executa a análise estatística separadamente sobre um diretório de resultados já existente. Útil para re-analisar experimentos anteriores sem re-executá-los.
+
+### 7. Executar testes
 
 ```bash
 python tests/test_state_coverage.py
@@ -180,18 +192,20 @@ Executa 5 testes automatizados verificando cobertura de estados, cálculo de alc
 
 **Transition Coverage**: cada transição `(estado, ação) → próximo_estado` definida na FSM deve ser exercitada pelo menos uma vez pela suíte de testes gerada.
 
-A função de recompensa é adaptada:
+A função de recompensa é padronizada:
 - **+50** por exercitar uma transição **ainda não coberta**
 - **-1** por revisitar uma transição **já coberta**
 - **-10** por ação inválida
 
 Assim, o Q-Learning aprende a explorar transições novas, gerando sequências de teste com cobertura máxima.
 
+> **Nota:** As funções de recompensa de ambos os critérios de cobertura são estruturalmente idênticas, diferindo apenas no que constitui "elemento de cobertura" (transição vs estado). Isso garante comparabilidade metodológica entre os métodos.
+
 ### State Coverage (Cobertura de Estados / All States)
 
 **State Coverage**: cada estado alcançável da FSM (computado via BFS a partir do estado inicial) deve ser visitado pelo menos uma vez pela suíte de testes gerada.
 
-A função de recompensa é adaptada:
+A função de recompensa é padronizada:
 - **+50** por visitar um estado **ainda não coberto**
 - **-1** por revisitar um estado **já coberto**
 - **-10** por ação inválida
@@ -225,6 +239,7 @@ Q-learning-fst/
 │   ├── state_coverage_agent.py    # Agente Q-Learning para cobertura de estados
 │   ├── coverage_runner.py         # Orquestrador de testes (cobertura de transições)
 │   ├── state_coverage_runner.py   # Orquestrador de testes (cobertura de estados)
+│   ├── analyze_results.py         # Análise estatística dos resultados
 │   └── visualization.py           # Gráficos e visualizações (todos os modos)
 ├── tests/                         # Testes automatizados
 │   ├── __init__.py

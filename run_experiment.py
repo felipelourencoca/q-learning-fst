@@ -39,6 +39,7 @@ from src.fsm_environment import load_fsm_from_json
 from src.coverage_runner import CoverageRunner
 from src.state_coverage_runner import StateCoverageRunner
 from src.experiment_config import ExperimentConfig
+from src.analyze_results import analyze_experiment
 
 
 def extract_fsm_name(filepath: str) -> str:
@@ -95,26 +96,42 @@ def run_single_experiment(
         "fsm_file": fsm_file,
         "fsm_name": extract_fsm_name(fsm_file),
         "seed": seed,
+        # Hiperparâmetros usados (rastreabilidade)
+        "hyperparameters": {
+            "alpha": config.alpha,
+            "gamma": config.gamma,
+            "epsilon": config.epsilon,
+            "epsilon_min": config.epsilon_min,
+            "epsilon_decay": config.epsilon_decay,
+            "n_episodes": config.n_episodes,
+            "max_steps": config.max_steps,
+        },
+        # Métricas de resultado
         "coverage_final": agent.coverage_percentage,
         "episode_full_coverage": agent.full_coverage_episode,
         "total_episodes_run": len(agent.coverage_history),
         "total_steps": sum(agent.steps_history),
         "test_suite_size": len(runner.test_suite),
         "execution_time_s": round(elapsed, 4),
+        # Históricos completos
         "coverage_history": agent.coverage_history,
         "steps_history": agent.steps_history,
         "rewards_history": agent.rewards_history,
     }
 
-    # Métricas específicas por método
+    # Métricas específicas por método + campo unificado coverage_target
     if method == "all_transitions":
         result["total_transitions"] = agent.total_transitions
         result["covered_transitions"] = len(agent.covered_transitions)
-        result["new_transitions_per_episode"] = agent.new_transitions_per_episode
+        result["coverage_target"] = agent.total_transitions
+        result["coverage_achieved"] = len(agent.covered_transitions)
+        result["new_per_episode"] = agent.new_transitions_per_episode
     elif method == "all_states":
         result["total_states"] = agent.total_states
         result["covered_states"] = len(agent.covered_states)
-        result["new_states_per_episode"] = agent.new_states_per_episode
+        result["coverage_target"] = agent.total_states
+        result["coverage_achieved"] = len(agent.covered_states)
+        result["new_per_episode"] = agent.new_states_per_episode
 
     return result
 
@@ -262,6 +279,12 @@ def run_experiment(config: ExperimentConfig):
     print(f"  Resumo CSV:   {csv_path}")
     print(f"  Resultados:   {output_dir}")
     print("=" * 70)
+
+    # Executar análise estatística automaticamente
+    print("\n")
+    analyze_experiment(output_dir)
+
+    return output_dir
 
 
 def main():

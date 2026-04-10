@@ -35,7 +35,6 @@ class CoverageQLearningAgent:
     REWARD_NEW_TRANSITION = 50.0     # Transição nova coberta
     REWARD_OLD_TRANSITION = -1.0     # Transição já coberta
     REWARD_INVALID_ACTION = -10.0    # Ação inválida
-    REWARD_GOAL_REACHED = 10.0       # Bônus por alcançar estado objetivo
 
     def __init__(
         self,
@@ -156,10 +155,6 @@ class CoverageQLearningAgent:
         else:
             # Já coberta
             reward += self.REWARD_OLD_TRANSITION
-
-        # Bônus por atingir estado objetivo
-        if next_state in self.env.goal_states:
-            reward += self.REWARD_GOAL_REACHED
 
         return reward
 
