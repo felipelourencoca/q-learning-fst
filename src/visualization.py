@@ -16,6 +16,21 @@ try:
 except ImportError:
     HAS_NETWORKX = False
 
+
+def _safe_spring_layout(G, **kwargs):
+    """Calcula spring layout com method='force' e fallback defensivo.
+
+    Força o método 'force' (Fruchterman-Reingold clássico) para evitar
+    que o NetworkX selecione automaticamente o método 'energy' em grafos
+    com >= 500 nós, o qual requer scipy. Caso a versão do NetworkX não
+    suporte o parâmetro 'method', faz fallback para a chamada sem ele.
+    """
+    try:
+        return nx.spring_layout(G, method='force', **kwargs)
+    except TypeError:
+        # Versão do NetworkX sem parâmetro 'method'
+        return nx.spring_layout(G, **kwargs)
+
 from .fsm_environment import FSMEnvironment
 from .q_learning_agent import QLearningAgent
 
@@ -140,7 +155,7 @@ def plot_fsm_diagram(
             optimal_nodes.add(next_state)
 
     # Layout
-    pos = nx.spring_layout(G, seed=42, k=2.5)
+    pos = _safe_spring_layout(G, seed=42, k=2.5)
 
     fig, ax = plt.subplots(1, 1, figsize=(14, 10))
     ax.set_title(
@@ -460,7 +475,7 @@ def plot_fsm_coverage_diagram(
         visited_states.add(s)
         visited_states.add(ns)
 
-    pos = nx.spring_layout(G, seed=42, k=2.5)
+    pos = _safe_spring_layout(G, seed=42, k=2.5)
 
     fig, ax = plt.subplots(1, 1, figsize=(14, 10))
 
@@ -699,7 +714,7 @@ def plot_fsm_state_coverage_diagram(
         else:
             edge_labels[key] = label
 
-    pos = nx.spring_layout(G, seed=42, k=2.5)
+    pos = _safe_spring_layout(G, seed=42, k=2.5)
 
     fig, ax = plt.subplots(1, 1, figsize=(14, 10))
 
