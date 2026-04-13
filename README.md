@@ -143,7 +143,7 @@ python main_state_coverage.py fsm/_03_MotionLightSwitch_flattened.json --max-ste
 O script `run_experiment.py` executa ambos os métodos de cobertura sobre as mesmas FSMs, com os mesmos hiperparâmetros, por múltiplas repetições com sementes aleatórias controladas. Os resultados são exportados em formato estruturado (CSV + JSON).
 
 ```bash
-# Experimento completo (30 repetições, FSMs 01-03)
+# Experimento completo (30 repetições, FSMs 01-05)
 python run_experiment.py
 
 # Experimento reduzido para teste rápido
@@ -181,10 +181,16 @@ Executa a análise estatística separadamente sobre um diretório de resultados 
 ### 7. Executar testes
 
 ```bash
+# Testes básicos (FSMs 01-02, regressão, BFS)
 python tests/test_state_coverage.py
+
+# Testes de robustez para FSMs maiores (03, 04, 05)
+python tests/test_large_fsms.py
 ```
 
-Executa 5 testes automatizados verificando cobertura de estados, cálculo de alcançabilidade (BFS), e regressão dos modos existentes.
+O primeiro executa 5 testes verificando cobertura de estados, cálculo de alcançabilidade (BFS), e regressão dos modos existentes.
+
+O segundo executa 7 testes validando que ambos os métodos (All States e All Transitions) funcionam corretamente em FSMs com até 473 estados e 2134 transições, incluindo verificações de parsing, integridade de históricos, e reprodutibilidade.
 
 ## 🧪 Critérios de Cobertura
 
@@ -244,6 +250,7 @@ Q-learning-fst/
 ├── tests/                         # Testes automatizados
 │   ├── __init__.py
 │   ├── test_state_coverage.py     # Testes de cobertura de estados e regressão
+│   ├── test_large_fsms.py         # Testes de robustez para FSMs maiores (03-05)
 │   └── test_reproducibility.py    # Teste de reprodutibilidade com seed
 ├── fsm/                           # FSMs em formato JSON
 │   ├── _01_LightSwitch_flattened.json

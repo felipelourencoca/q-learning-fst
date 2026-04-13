@@ -326,7 +326,7 @@ def main():
     )
     parser.add_argument(
         "--fsm", nargs="+", default=None,
-        help="Caminhos dos arquivos FSM (padrão: FSMs 01-03)",
+        help="Caminhos dos arquivos FSM (padrão: FSMs 01-05)",
     )
 
     args = parser.parse_args()
@@ -344,6 +344,14 @@ def main():
 
     if args.fsm is not None:
         config.fsm_files = args.fsm
+    else:
+        config.fsm_files = [
+            "fsm/_01_LightSwitch_flattened.json",
+            "fsm/_02_DimmableLightSwitch_flattened.json",
+            "fsm/_03_MotionLightSwitch_flattened.json",
+            "fsm/_04_LightAndMotionSensingLightSwitch_flattened.json",
+            "fsm/_05_PresenceSimulationLightSwitch_flattened.json",
+        ]
 
     run_experiment(config)
 
